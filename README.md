@@ -1,7 +1,11 @@
 # Bianchetto
 Bianchetto is an Ethereum Developer Framework for iOS
 
-Please note that it's at a very early stage, therefore there's still **a lot** to be done. It has *only been tested with TestRPC running locally*.
+### Warnings
+
+* Please note that it's at a very early stage, therefore there's still **a lot** to be done.
+* It has *only been tested with TestRPC running locally*.
+* Executions of multiple arguments functions hasn't been properly tested and it'll probably crash.
 
 ### Installation
 
