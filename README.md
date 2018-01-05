@@ -1,7 +1,7 @@
 # Bianchetto
 Bianchetto is an Ethereum Developer Framework for iOS
 
-Please note that it's at a very early stage, therefore there's still **a lot** to be done.
+Please note that it's at a very early stage, therefore there's still **a lot** to be done. It has *only been tested with TestRPC running locally*.
 
 ### Installation
 
@@ -54,3 +54,7 @@ It executes the `update`  function with the `Test String` value for the `newMess
 let bianchetto = Bianchetto.init(host: "http://localhost", port: "8545")
 bianchetto.executeFunction(fromAccountAddress: "0xdbd5cc227eab854a53108dbcee38245e1582bb80", toContractAddress: "0xddee8fbd7d0c5d119d44ac1af31a8d4d7121870a", name: "update", arguments: ["string":"Test String"])
 ```
+
+### Other Required Improvements
+
+* Migrate `Format` class from `Objective-C` to `Swift`
