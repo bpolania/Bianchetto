@@ -1,6 +1,5 @@
 //
 //  RPC.swift
-//  HonDapp
 //
 //  Created by Boris Polania on 1/3/18.
 //  Copyright © 2018 Boris Polania. All rights reserved.
