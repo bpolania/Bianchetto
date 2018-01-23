@@ -1,77 +1,505 @@
 //
-//  Bianchetto.swift
+//  RPC.swift
+//  HonDapp
 //
-//  Created by Boris Polania on 1/4/18.
+//  Created by Boris Polania on 1/3/18.
 //  Copyright © 2018 Boris Polania. All rights reserved.
 //
 
 import UIKit
 
-class Bianchetto: NSObject {
-
-    let rpc : RPC
+class RPC: NSObject {
     
-    init(host: String, port: String) {
-        rpc = RPC.init(host: host, port: port)
+    var host: String
+    var port: String
+    var version: String
+    
+    init(host: String, port: String, version: String = "2.0") {
+        self.host = host
+        self.port = port
+        self.version = version
     }
     
     /*!
-     * @brief executes a contracts function
-     * @brief execution equivalent to Truffle transactions
-     * @see http://truffleframework.com/docs/getting_started/contracts#executing-contract-functions
-     * @param from the string with the sending account address
-     * @param to the string with the receiving contract account address
-     * @param name the string with the name of the function
-     * @param arguments dictionary with the arguments types and value [type : value] it only accepts ABI defined types
-     * @see https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
+     * @brief Calls the web3_clientVersion method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#web3_clientversion
      */
-    func executeFunction(fromAccountAddress: String, toContractAddress: String, name: String, arguments : [String : Any]) {
+    func web3ClientVersion(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "web3_clientVersion"
+        jsonDictionary["id"] = 67
         
-        var fullArgumentsHexString = ""
-        var fullArgumentsHexStringTemp = ""
-        var methodIdArgs = ""
-        var argumentsValuesDictionary : [Int : String] = [:]
-        var offsetIndex = arguments.count
-        
-        for i in 0..<arguments.count {
-            
-            if Array(arguments.keys)[i] == "uint256" {
-                fullArgumentsHexString = fullArgumentsHexString + Format.encodeUInt256ArgumentValue(Int32(Array(arguments.values)[i] as! Int))
-                let argumentValue = Format.encodeUInt256ArgumentValue(Int32(Array(arguments.values)[i] as! Int))
-                argumentsValuesDictionary[i] = argumentValue!
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
             }
-            
-            if Array(arguments.keys)[i] == "string" {
-                let offset = String(format:"%064X", 32).lowercased()
-                let string = Array(arguments.values)[i] as! String
-                let data = string.data(using: .utf8)!
-                let hexString = Format.hex(toString: data)!
-                let size = String(format:"%064X", (hexString.lengthOfBytes(using: .utf8))/2).lowercased()
-                let paddedHexString = hexString.padding(toLength: 64, withPad: "0", startingAt: 0) as Any
-                fullArgumentsHexString = fullArgumentsHexString +  "\(offset)\(size)\(paddedHexString)"
-                argumentsValuesDictionary[i] = offset
-                argumentsValuesDictionary[offsetIndex] = "\(size)\(paddedHexString)"
-                offsetIndex += 1
-            }
-            
-            methodIdArgs = methodIdArgs + Array(arguments.keys)[i]
-            
-            if i < arguments.count - 1 {
-                methodIdArgs = methodIdArgs + ","
-            }
-        }
-        
-        for i in 0...arguments.count {
-            fullArgumentsHexStringTemp += argumentsValuesDictionary[i]!
-        }
-        
-        rpc.web3SHA3(data: "\(name)(\(methodIdArgs))", completion: { (result) in
-            let methodId = "\(Format.getMethodId(result)!)"
-            let contractData = "0x\(methodId)\(fullArgumentsHexStringTemp)"
-            self.rpc.sendTransaction(from: fromAccountAddress, to: toContractAddress, data: contractData, completion: { (response) in
-                print("Response:\(response)")
-            })
         })
     }
-
+    
+    /*!
+     * @brief Calls the web3_sha3 method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#web3_sha3
+     * @param data the string that need to be Keccak-256 encoded
+     */
+    func web3SHA3(data : String, completion: @escaping (_ result: String) -> Void) {
+        
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "web3_sha3"
+        jsonDictionary["id"] = 64
+        jsonDictionary["params"] = [data]
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(result as! String)
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+            
+        })
+        
+    }
+    
+    /*!
+     * @brief Calls the net_version method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#net_version
+     */
+    func netVersion(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "net_version"
+        jsonDictionary["id"] = 67
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the net_peerCount method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#net_peercount
+     */
+    func net_peerCount(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "net_peerCount"
+        jsonDictionary["id"] = 74
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the net_listening method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#net_listening
+     */
+    func netListening(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "net_listening"
+        jsonDictionary["id"] = 67
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_protocolVersion method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_protocolversion
+     */
+    func ethProtocolVersion(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_protocolVersion"
+        jsonDictionary["id"] = 67
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_syncing method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_syncing
+     */
+    func ethSyncing(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_syncing"
+        jsonDictionary["id"] = 1
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_coinbase method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_coinbase
+     */
+    func ethCoinbase(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_coinbase"
+        jsonDictionary["id"] = 64
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_mining method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_mining
+     */
+    func ethMining(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_mining"
+        jsonDictionary["id"] = 71
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_hashrate method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_hashrate
+     */
+    func ethHashrate(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_hashrate"
+        jsonDictionary["id"] = 71
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_gasPrice method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_gasprice
+     */
+    func ethGasPrice(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_gasPrice"
+        jsonDictionary["id"] = 73
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_accounts method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_accounts
+     */
+    func accounts(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_accounts"
+        jsonDictionary["id"] = 1
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_blockNumber method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_blocknumber
+     */
+    func ethBlockNumber(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_blockNumber"
+        jsonDictionary["id"] = 83
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_getBalance method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getbalance
+     */
+    func ethGetBalance(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_getBalance"
+        jsonDictionary["id"] = 1
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_getStorageAt method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getstorageat
+     * @param data 20 Bytes - address of the storage
+     * @param quantity string with integer of the position in the storage in hex
+     * @param quantityTag integer block number, or the string "latest", "earliest" or "pending"
+     * @see default block parameter (https://github.com/ethereum/wiki/wiki/JSON-RPC#the-default-block-parameter)
+     */
+    func ethGetStorageAt(data : String, quantity : String, quantityTag : String, completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_getStorageAt"
+        jsonDictionary["id"] = 1
+        jsonDictionary["params"] = [data, quantity, quantityTag]
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_getTransactionCount method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_gettransactioncount
+     * @param data 20 Bytes - address
+     * @param quantityTag integer block number, or the string "latest", "earliest" or "pending"
+     * @see default block parameter (https://github.com/ethereum/wiki/wiki/JSON-RPC#the-default-block-parameter)
+     */
+    func ethGetTransactionCount(data : String, quantityTag : String, completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_getTransactionCount"
+        jsonDictionary["id"] = 1
+        jsonDictionary["params"] = [data, quantityTag]
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_getCompilers method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getcompilers
+     */
+    func getCompilers(completion: @escaping (_ result: String) -> Void) {
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_getCompilers"
+        jsonDictionary["id"] = 3
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(String(describing: result))
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+        })
+    }
+    
+    /*!
+     * @brief Calls the eth_sendtransaction method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sendtransaction
+     * @param from the string with the sending account address
+     * @param to the string with the receiving contract account address
+     * @param data the ABI encoded data to be sent to the contract
+     * @see https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
+     */
+    func sendTransaction(from: String, to : String, data : String, completion: @escaping (_ result: String) -> Void) {
+        
+        var jsonParamsDictionary = [String: Any]()
+        jsonParamsDictionary["from"] = from
+        jsonParamsDictionary["to"] = to
+        jsonParamsDictionary["data"] = data
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_sendTransaction"
+        jsonDictionary["id"] = 8
+        jsonDictionary["params"] = [jsonParamsDictionary]
+        
+        print(jsonDictionary)
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(result as! String)
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+            
+        })
+        
+    }
+    
+    /*!
+     * @brief Calls the eth_getLogs method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getlogs
+     * @param object the filter object
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_newfilter
+     */
+    func getLogs(object: String, completion: @escaping (_ result: String) -> Void) {
+        
+        var jsonParamsDictionary = [String: Any]()
+        jsonParamsDictionary["topics"] = object
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_getLogs"
+        jsonDictionary["id"] = 74
+        jsonDictionary["params"] = [jsonParamsDictionary]
+        
+        print(jsonDictionary)
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(result as! String)
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+            
+        })
+        
+    }
+    
 }
+
