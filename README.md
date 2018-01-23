@@ -42,6 +42,7 @@ From this specification only the following methods are implemented:
 * eth_getTransactionCount
 * eth_getCompilers
 * eth_sendTransaction
+* eth_newFilter
 * eth_getLogs
 
 The following improvements are pending and planned:

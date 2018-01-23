@@ -466,6 +466,44 @@ class RPC: NSObject {
     }
     
     /*!
+     * @brief Calls the eth_newFilter method from the JSON RPC API
+     * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_newfilter
+     * @param from the string with integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions
+     * @param to the string with the integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
+     * @param address string with the contract address or a list of addresses from which logs should originate.
+     * @param Array of 32 Bytes DATA topics. Topics are order-dependent. Each topic can also be an array of DATA with "or" options.
+     */
+    func eth_newFilter(from: String, to : String, address : String, topics : [String], completion: @escaping (_ result: String) -> Void) {
+        
+        var jsonParamsDictionary = [String: Any]()
+        jsonParamsDictionary["from"] = from
+        jsonParamsDictionary["to"] = to
+        jsonParamsDictionary["data"] = address
+        jsonParamsDictionary["topics"] = topics
+        var jsonDictionary = [String: Any]()
+        jsonDictionary["jsonrpc"] = version
+        jsonDictionary["method"] = "eth_newFilter"
+        jsonDictionary["id"] = 74
+        jsonDictionary["params"] = [jsonParamsDictionary]
+        
+        HTTPRequest.sendPOSTRequest(host: host, port: port, data: jsonDictionary, completion: { (response) in
+            
+            do {
+                // Convert the data to JSON
+                let jsonSerialized = try JSONSerialization.jsonObject(with: response, options: []) as? [String : Any]
+                
+                if let json = jsonSerialized, let result = json["result"] {
+                    completion(result as! String)
+                }
+            } catch let error as NSError {
+                print(error.localizedDescription)
+            }
+            
+        })
+        
+    }
+    
+    /*!
      * @brief Calls the eth_getLogs method from the JSON RPC API
      * @see https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getlogs
      * @param object the filter object
@@ -501,4 +539,3 @@ class RPC: NSObject {
     }
     
 }
-
